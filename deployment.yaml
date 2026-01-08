@@ -1,34 +1,136 @@
+# -----------------------------
+
+# Apache Deployment
+
+# -----------------------------
+
 apiVersion: apps/v1
+
 kind: Deployment
+
 metadata:
-  name: apache-deployment
+
+  name: apache-deploy
+
   labels:
+
     app: apache
+
 spec:
-  replicas: 3 # You can change this number
+
+  replicas: 2   # HPA will control this
+
   selector:
+
     matchLabels:
+
       app: apache
+
   template:
+
     metadata:
+
       labels:
+
         app: apache
+
     spec:
+
       containers:
-      - name: httpd-container
-        image: httpd:latest # Uses the latest official Apache image
+
+      - name: apache
+
+        image: httpd:2.4
+
         ports:
-        - containerPort: 80 # Apache typically runs on port 80
+
+        - containerPort: 80
+
+        resources:
+
+          requests:
+
+            cpu: "100m"
+
+            memory: "128Mi"
+
+          limits:
+
+            cpu: "500m"
+
+            memory: "256Mi"
+ 
 ---
+
+# -----------------------------
+
+# Apache Service (LoadBalancer)
+
+# -----------------------------
+
 apiVersion: v1
+
 kind: Service
+
 metadata:
+
   name: apache-service
+
 spec:
+
+  type: LoadBalancer
+
   selector:
+
     app: apache
+
   ports:
-    - protocol: TCP
-      port: 80 # Service port
-      targetPort: 80 # Container port
-  type: ClusterIP # Makes the service only accessible within the cluster
+
+  - port: 80
+
+    targetPort: 80
+ 
+---
+
+# -----------------------------
+
+# Horizontal Pod Autoscaler
+
+# -----------------------------
+
+apiVersion: autoscaling/v2
+
+kind: HorizontalPodAutoscaler
+
+metadata:
+
+  name: apache-hpa
+
+spec:
+
+  scaleTargetRef:
+
+    apiVersion: apps/v1
+
+    kind: Deployment
+
+    name: apache-deploy
+
+  minReplicas: 2
+
+  maxReplicas: 6
+
+  metrics:
+
+  - type: Resource
+
+    resource:
+
+      name: cpu
+
+      target:
+
+        type: Utilization
+
+        averageUtilization: 50
+ 
